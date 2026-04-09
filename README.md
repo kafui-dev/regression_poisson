@@ -53,6 +53,7 @@ Le projet utilise le dataset `airquality` intégré à R, qui contient des mesur
 
 ---
 Projet réalisé en groupe dans le cadre d'une étude sur les modèles linéaires généralisés (GLM).
+
 Membres du groupe :
 - DESSOU Lysias
 - HOMEVO Kafui
