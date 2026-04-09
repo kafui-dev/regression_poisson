@@ -52,4 +52,8 @@ renv::restore()
 Le projet utilise le dataset `airquality` intégré à R, qui contient des mesures quotidiennes de la qualité de l'air à New York de mai à septembre 1973.
 
 ---
-*Projet réalisé dans le cadre d'une étude sur les modèles linéaires généralisés (GLM).*
+Projet réalisé en groupe dans le cadre d'une étude sur les modèles linéaires généralisés (GLM).
+Membres du groupe :
+- DESSOU Lysias
+- HOMEVO Kafui
+
