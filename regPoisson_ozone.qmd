@@ -1,0 +1,246 @@
+---
+title: "regPoisson_ozone"
+format: html
+---
+
+# Régression de Poisson : prédiction de l'ozone
+
+## Introduction
+
+### Contexte et justification
+
+Le réchauffement climatique est aujourd'hui l'un des plus grands problèmes auxquels fait face la planète Terre, et est la juste conséquence de la mauvaise exploitation des ressources par l'homme. Et l'un des effets les plus critiques est la destruction de la couche d'ozone responsable de l'effet de serre. Pour lutter contre un tel phénomène, il est important de comprendre l'évolution des différentes entités environnementales en jeu, et l'ozone en est un parfait exemple. Comprendre comment modéliser les transformations qu'elle subit en fonction de plusieurs facteurs est impératif si l'on veut prendre des mesures radicales et avisées. Ce travail consistera donc à modéliser le niveau de l'ozone, en se basant sur le dataset `airquality` qui mesure la qualité de l'air à New York, de façon journalière, de mai à septempbre 1973.
+
+### Choix des données
+
+Le niveau d'ozone est en général mesuré en `ppb` ou *parts per billion* et est une unité de mesure de concentration représentant une partie de soluté pour un milliard $10^9$ de parties de solution. Utilisé pour de très faibles concentrations (contaminants, air, eau), $1 \text{ ppb} = 1 \mu g/L \text{ ou } 1 \mu g / kg$. Par définition donc, c'est une valeur qui doit être **strictement non-négative**. De plus, les analyseurs d'ozone (photométrie UV) ont en général une résolution de `1 pb`, ce qui en fait des mesures toutes en **nombres entiers**. Ces conditions sont toutes respectées dans le dataset `airquality` et constituent les raisons pour lesquelles nous avons choisi ces données.
+
+------------------------------------------------------------------------
+
+## Modélisation
+
+### Traitement des données et Analyse exploratoire
+
+Chargeons tous les packages que nous aurons à utiliser dans cette étude.
+
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+
+#install.packages("gridExtra")
+library(gridExtra)
+
+#install.packages("caTools") 
+library(caTools) # pour la séparation de dataset en parties train et test
+
+#install.packages("MASS") 
+library(MASS) # pour le modèle binomial négatif
+```
+
+Chargement des données et exploration.
+
+```{r}
+data("airquality")
+?airquality
+```
+
+```{r}
+str(airquality)
+```
+
+```{r}
+summary(airquality)
+```
+
+```{r}
+head(airquality)
+```
+
+Nous allons séparer le dataset en parties d'entraînement et de test, grâce au package `SPlit`.
+
+```{r}
+data_split <- sample.split(airquality, SplitRatio = 0.7)
+
+# on ne sélectionnera que les colonnes qui nous intéressent
+train <- subset(airquality, data_split == TRUE, select = c("Ozone", "Solar.R", "Wind", "Temp"))
+test <- subset(airquality, data_split == FALSE, select = c("Ozone", "Solar.R", "Wind", "Temp"))
+
+str(train)
+str(test)
+
+summary(train)
+summary(test)
+```
+
+Notons que ces données contiennent toujours des valleurs manquantes, nous allons donc les enlever.
+
+```{r}
+trainCleaned <- na.omit(train)
+testCleaned <- na.omit(test)
+str(trainCleaned)
+```
+
+```{r}
+cor(trainCleaned)
+```
+
+Visualisations des relations
+
+```{r}
+p1 <- ggplot(trainCleaned) + 
+  geom_point(aes(x = Solar.R, y = Ozone)) + ggtitle("Ozone VS Solar.R")
+
+p2 <- ggplot(trainCleaned) + 
+  geom_point(aes(x = Wind, y = Ozone)) + ggtitle("Ozone VS Wind")
+
+p3 <- ggplot(trainCleaned) + 
+  geom_point(aes(x = Temp, y = Ozone)) + ggtitle("Ozone VS Temp")
+
+grid.arrange(p1, p2, p3, ncol = 3, nrow = 1)
+```
+
+### Modèle de Poisson
+
+Le modèle de Poisson est réalisé grâce à la fonction `glm()` avec l'argument `family = "poisson"`.
+
+```{r}
+pois.model <- glm(Ozone ~ Solar.R + Wind + Temp, data = trainCleaned, family = "poisson")
+```
+
+### Estimation des coefficients, significativité globale et individuelle et interprétation
+
+```{r}
+summary(pois.model)
+```
+
+L'expression du modèle est donc : $$\ln{\lambda_{Ozone}} = \beta_0 + \beta_1 \cdot \text{Solar.R} + \beta_2 \cdot \text{Wind} + \beta_3 \cdot \text{Temp}$$
+
+avec $\beta_0 = 1.457$, $\beta_1 = 0.0025$, $\beta_2 = -1.004$, $\beta_3 = 0.0334$ .
+
+Comme on peut le remarquer, tous les coefficients du modèle sont tous très significatifs.
+
+#### Interprétation des coefficients
+
+On dira alors qu'une augmentation d'une unité de `Solar.R` (rayonnement solaire) entraîne une augmentation de 0.0025 ppb de la concentration moyenne d'`Ozone`. La même logique est utilisée pour les autres coefficients.
+
+Une meilleure interprétation se fait en calculant les ratios de taux d’incidence (**IRR**) via $\exp(\hat{\beta}_j)$ pour chaque coefficient. Ainsi, on a :
+
+-   **Solar.R :** `exp(0.0025131) = 1.002516`. Une augmentation d'une unité du rayonnement solaire augmente la concentration d'ozone de **0.25%**, toutes choses étant égales par ailleurs
+
+-   **Wind** : `exp(-0.1003999) = 0.9044756`. Pour chaque augmentation de 1 unité de la vitesse du vent, la concentration attendue d'ozone **diminue de 9,55%** (1-0.904).
+
+-   **Temp** : `exp(0.0334104) = 1.033975`. Pour chaque augmentation de 1 degré de température, la concentration attendue d'ozone **augmente de 3,4%**.
+
+#### Déviance
+
+On remarque que la sortie `summary(pois.model)` a donné des coefficients tous **très significatifs individuellement**.
+
+On analyse en plus la **déviance**, pour analyser l'influence de chacune des variables sur l'Ozone.
+
+```{r}
+anova(pois.model, test="Chisq")
+```
+
+On remarque que toutes les p-valeurs sont très significatives; par conséquent, l'influence de chacune de ces valeurs (`Solar.R`, `Wind` et `Temp`) est hautement significative sur `Ozone`.
+
+#### Rapport de vraisemblance LR
+
+L'objectif est d'analyser la **significativité globale** des coefficients :
+
+-   on crée le modèle nul
+
+-   on fait une anamyse anova entre le modèle complet et le modèle nul
+
+```{r}
+pois.model_null <- glm(Ozone ~ 1, data = trainCleaned, family = "poisson")
+
+anova(pois.model_null, pois.model, test = "Chisq")
+```
+
+On remarque que la p-value est hautement significative, alors le modèle est globalement significatif (il y a au moins un coefficient non nul). On dit que *les prédicteurs améliorent significativement le modèle par rapport au modèle nul.*
+
+Remarque : ces résultats sont déjà visibles dans la dernière partie du `summary(pois.model)` :
+
+```         
+      Null deviance: 1844.07  on 74  degrees of freedom 
+      Residual deviance:  489.11  on 71  degrees of freedom 
+      AIC: 892.59
+```
+
+Cependant, la déviance résiduelle (489.11) est **beaucoup plus grande que ses degrés de liberté (71)**. Le rapport `489.11 / 71 ≈ 6.89` est bien supérieur à 1, ce qui **indique une très forte surdispersion**.
+
+------------------------------------------------------------------------
+
+### Validation du modèle
+
+#### Vérification des hypothèses
+
+1.  **Indépendance des réponses (Ozone)**
+
+    On considère en général que cette hypothèse est satisfaite.
+
+2.  **Distribution de Poisson pour les réponses (Ozone)**
+
+    Pour cela, on va comparer la distribution des valeurs observées avec la distribution théorique de Poisson de paramètre la moyenne observée.
+
+```{r}
+lambda_obs <- mean(trainCleaned$Ozone)
+
+# simulation des comptages
+set.seed(123)
+theoretic_oz <- rpois(length(trainCleaned$Ozone), lambda = lambda_obs)
+
+# affichage simultané
+ggplot(trainCleaned) + 
+  geom_bar(aes(trainCleaned$Ozone, fill = "#0000FF")) +
+  geom_bar(aes(theoretic_oz, fill = "#FF2100")) +
+  ggtitle("Ozone vs Distribution de Poisson") + 
+  scale_fill_discrete(name = "Légende", labels = c("Ozone", "Poisson théorique"))
+```
+
+On peut voir que les deux distributions sont assez différentes. La variable `Ozone` ne suit donc pas une distribution de poisson de paramètre 42.78. De plus, les valeurs sont très dispersées sur l'axe des abscisses, ce qui peut être un effet de la **surdispersion**.
+
+3.  **Surdispersion**
+
+    La surdispersion a déjà été remarquée précédemment, donc nous allons nous contenter de faire un test pour la confirmer, celui du **Z-Score.**
+
+    $$
+    Z_i = \frac{(y_i - \lambda_i)^2 - y_i}{\lambda_i \sqrt{2}} \sim t_{1,\alpha}
+    $$
+
+    ```{r}
+    lamda <- predict(pois.model, type = "response") #estimations du paramètre lambda
+    z <- ((trainCleaned$Ozone - lamda)^2 - trainCleaned$Ozone) / (lamda * sqrt(2))
+    zscore <- lm(z ~ 1)
+    summary(zscore)
+    ```
+
+Le **z-score** est donc significatif, ce qui, d'après **J.M. Hilbe**, indique la présence de **surdispersion**, ce qui confirme notre analyse précédente.
+
+On constate que deux hypothèses sont violées (distribution de Poisson et surdispersion), alors nous allons passer à l'utilisation d'autres structures d'erreurs : les modèles **quasi-poisson** et **binomial négatif.**
+
+-   **Modèle Quasi-Poisson**
+
+    ```{r}
+    quasipois.model <- glm(Ozone ~ Solar.R + Wind + Temp, data = trainCleaned, family = "quasipoisson")
+
+    summary(quasipois.model)
+    ```
+
+    On remarque que $489/71 = 6.887324 \lt 7.564 \text{ (paramètre de dispersion)}$, par conséquent, la surdispersion a été prise en compte par ce modèle et l'a corrigé.
+
+    **NB :** L'utilisation d’une structure d’erreur « quasi poisson » à pour conséquence d’**augmenter l’erreur standard des paramètres**. On peut le remarquer par exemple avec celui de l'`intercept` qui était de 0.24 environ pour le modèle de poisson standard, contrairement à celui actuel de 0.66 environ. **En dehors de ça les coefficients ne changent pas**.
+
+-   **Modèle Binomial Négatif**
+
+    ```{r}
+    nb2_model <- MASS::glm.nb(Ozone ~ Solar.R + Wind + Temp, data = trainCleaned)
+
+    summary(nb2_model)
+    ```
+
+    De même, pour ce modèle, on a : $80.684 / 71 = 1.136394$, ce qui indique une surdispersion modérée : on dit que ce modèle a absorbé la surdispersion induite par le modèle de poisson simple.
+
+#### Qualité et Pertinence
+
+Jusque-là, nous avons 3 modèles : poisson normal, quasi-poisson et binomial négatif.
