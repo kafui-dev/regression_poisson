@@ -20,6 +20,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -36,6 +71,35 @@ ul.task-list li input[type="checkbox"] {
 <link href="regPoisson_ozone_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="regPoisson_ozone_files/libs/bootstrap/bootstrap-9e3ffae467580fdb927a41352e75a2e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -66,9 +130,451 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="régression-de-poisson-prédiction-de-lozone" class="level1">
 <h1>Régression de Poisson : prédiction de l’ozone</h1>
-<section id="choix-des-données-et-justification" class="level2">
-<h2 class="anchored" data-anchor-id="choix-des-données-et-justification">Choix des données et justification</h2>
-<p>Le niveau d’ozone est en général mesuré en <code>ppb</code> ou <em>parts per billion</em></p>
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<section id="contexte-et-justification" class="level3">
+<h3 class="anchored" data-anchor-id="contexte-et-justification">Contexte et justification</h3>
+<p>Le réchauffement climatique est aujourd’hui l’un des plus grands problèmes auxquels fait face la planète Terre, et est la juste conséquence de la mauvaise exploitation des ressources par l’homme. Et l’un des effets les plus critiques est la destruction de la couche d’ozone responsable de l’effet de serre. Pour lutter contre un tel phénomène, il est important de comprendre l’évolution des différentes entités environnementales en jeu, et l’ozone en est un parfait exemple. Comprendre comment modéliser les transformations qu’elle subit en fonction de plusieurs facteurs est impératif si l’on veut prendre des mesures radicales et avisées. Ce travail consistera donc à modéliser le niveau de l’ozone, en se basant sur le dataset <code>airquality</code> qui mesure la qualité de l’air à New York, de façon journalière, de mai à septempbre 1973.</p>
+</section>
+<section id="choix-des-données" class="level3">
+<h3 class="anchored" data-anchor-id="choix-des-données">Choix des données</h3>
+<p>Le niveau d’ozone est en général mesuré en <code>ppb</code> ou <em>parts per billion</em> et est une unité de mesure de concentration représentant une partie de soluté pour un milliard <span class="math inline">\(10^9\)</span> de parties de solution. Utilisé pour de très faibles concentrations (contaminants, air, eau), <span class="math inline">\(1 \text{ ppb} = 1 \mu g/L \text{ ou } 1 \mu g / kg\)</span>. Par définition donc, c’est une valeur qui doit être <strong>strictement non-négative</strong>. De plus, les analyseurs d’ozone (photométrie UV) ont en général une résolution de <code>1 pb</code>, ce qui en fait des mesures toutes en <strong>nombres entiers</strong>. Ces conditions sont toutes respectées dans le dataset <code>airquality</code> et constituent les raisons pour lesquelles nous avons choisi ces données.</p>
+<hr>
+</section>
+</section>
+<section id="modélisation" class="level2">
+<h2 class="anchored" data-anchor-id="modélisation">Modélisation</h2>
+<section id="traitement-des-données-et-analyse-exploratoire" class="level3">
+<h3 class="anchored" data-anchor-id="traitement-des-données-et-analyse-exploratoire">Traitement des données et Analyse exploratoire</h3>
+<p>Chargeons tous les packages que nous aurons à utiliser dans cette étude.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("ggplot2")</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("gridExtra")</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gridExtra)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("caTools") </span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caTools) <span class="co"># pour la séparation de dataset en parties train et test</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("MASS") </span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MASS) <span class="co"># pour le modèle binomial négatif</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("ResourceSelection") </span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ResourceSelection) <span class="co"># pour le test de Hosmer-Lemeshow</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>ResourceSelection 0.3-6      2023-06-27</code></pre>
+</div>
+</div>
+<p>Chargement des données et exploration.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"airquality"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>?airquality</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>starting httpd help server ... done</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(airquality)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'data.frame':   153 obs. of  6 variables:
+ $ Ozone  : int  41 36 12 18 NA 28 23 19 8 NA ...
+ $ Solar.R: int  190 118 149 313 NA NA 299 99 19 194 ...
+ $ Wind   : num  7.4 8 12.6 11.5 14.3 14.9 8.6 13.8 20.1 8.6 ...
+ $ Temp   : int  67 72 74 62 56 66 65 59 61 69 ...
+ $ Month  : int  5 5 5 5 5 5 5 5 5 5 ...
+ $ Day    : int  1 2 3 4 5 6 7 8 9 10 ...</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(airquality)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     Ozone           Solar.R           Wind             Temp      
+ Min.   :  1.00   Min.   :  7.0   Min.   : 1.700   Min.   :56.00  
+ 1st Qu.: 18.00   1st Qu.:115.8   1st Qu.: 7.400   1st Qu.:72.00  
+ Median : 31.50   Median :205.0   Median : 9.700   Median :79.00  
+ Mean   : 42.13   Mean   :185.9   Mean   : 9.958   Mean   :77.88  
+ 3rd Qu.: 63.25   3rd Qu.:258.8   3rd Qu.:11.500   3rd Qu.:85.00  
+ Max.   :168.00   Max.   :334.0   Max.   :20.700   Max.   :97.00  
+ NA's   :37       NA's   :7                                       
+     Month            Day      
+ Min.   :5.000   Min.   : 1.0  
+ 1st Qu.:6.000   1st Qu.: 8.0  
+ Median :7.000   Median :16.0  
+ Mean   :6.993   Mean   :15.8  
+ 3rd Qu.:8.000   3rd Qu.:23.0  
+ Max.   :9.000   Max.   :31.0  
+                               </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(airquality)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  Ozone Solar.R Wind Temp Month Day
+1    41     190  7.4   67     5   1
+2    36     118  8.0   72     5   2
+3    12     149 12.6   74     5   3
+4    18     313 11.5   62     5   4
+5    NA      NA 14.3   56     5   5
+6    28      NA 14.9   66     5   6</code></pre>
+</div>
+</div>
+<p>Nous allons séparer le dataset en parties d’entraînement et de test, grâce au package <code>SPlit</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>data_split <span class="ot">&lt;-</span> <span class="fu">sample.split</span>(airquality, <span class="at">SplitRatio =</span> <span class="fl">0.7</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># on ne sélectionnera que les colonnes qui nous intéressent</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>train <span class="ot">&lt;-</span> <span class="fu">subset</span>(airquality, data_split <span class="sc">==</span> <span class="cn">TRUE</span>, <span class="at">select =</span> <span class="fu">c</span>(<span class="st">"Ozone"</span>, <span class="st">"Solar.R"</span>, <span class="st">"Wind"</span>, <span class="st">"Temp"</span>))</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span> <span class="fu">subset</span>(airquality, data_split <span class="sc">==</span> <span class="cn">FALSE</span>, <span class="at">select =</span> <span class="fu">c</span>(<span class="st">"Ozone"</span>, <span class="st">"Solar.R"</span>, <span class="st">"Wind"</span>, <span class="st">"Temp"</span>))</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(train)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'data.frame':   101 obs. of  4 variables:
+ $ Ozone  : int  12 18 NA 28 8 NA 7 16 18 14 ...
+ $ Solar.R: int  149 313 NA NA 19 194 NA 256 65 334 ...
+ $ Wind   : num  12.6 11.5 14.3 14.9 20.1 8.6 6.9 9.7 13.2 11.5 ...
+ $ Temp   : int  74 62 56 66 61 69 74 69 58 64 ...</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(test)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'data.frame':   52 obs. of  4 variables:
+ $ Ozone  : int  41 36 23 19 11 14 30 11 NA NA ...
+ $ Solar.R: int  190 118 299 99 290 274 322 44 66 266 ...
+ $ Wind   : num  7.4 8 8.6 13.8 9.2 10.9 11.5 9.7 16.6 14.9 ...
+ $ Temp   : int  67 72 65 59 66 68 68 62 57 58 ...</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(train)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     Ozone           Solar.R            Wind           Temp      
+ Min.   :  1.00   Min.   :  7.00   Min.   : 1.7   Min.   :56.00  
+ 1st Qu.: 16.00   1st Qu.: 91.75   1st Qu.: 7.4   1st Qu.:72.00  
+ Median : 28.00   Median :199.00   Median :10.3   Median :79.00  
+ Mean   : 40.62   Mean   :179.28   Mean   :10.3   Mean   :77.95  
+ 3rd Qu.: 63.75   3rd Qu.:255.25   3rd Qu.:12.0   3rd Qu.:85.00  
+ Max.   :168.00   Max.   :334.00   Max.   :20.7   Max.   :97.00  
+ NA's   :27       NA's   :5                                      </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(test)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     Ozone           Solar.R           Wind             Temp      
+ Min.   : 10.00   Min.   : 14.0   Min.   : 2.300   Min.   :57.00  
+ 1st Qu.: 23.00   1st Qu.:135.5   1st Qu.: 7.400   1st Qu.:72.75  
+ Median : 36.50   Median :223.5   Median : 8.900   Median :79.00  
+ Mean   : 44.79   Mean   :198.7   Mean   : 9.296   Mean   :77.75  
+ 3rd Qu.: 60.50   3rd Qu.:264.0   3rd Qu.:11.500   3rd Qu.:84.25  
+ Max.   :135.00   Max.   :322.0   Max.   :16.600   Max.   :96.00  
+ NA's   :10       NA's   :2                                       </code></pre>
+</div>
+</div>
+<p>Notons que ces données contiennent toujours des valleurs manquantes, nous allons donc les enlever.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>trainCleaned <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(train)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>testCleaned <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(test)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(trainCleaned)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'data.frame':   71 obs. of  4 variables:
+ $ Ozone  : int  12 18 8 16 18 14 34 6 1 11 ...
+ $ Solar.R: int  149 313 19 256 65 334 307 78 8 320 ...
+ $ Wind   : num  12.6 11.5 20.1 9.7 13.2 11.5 12 18.4 9.7 16.6 ...
+ $ Temp   : int  74 62 61 69 58 64 66 57 59 73 ...
+ - attr(*, "na.action")= 'omit' Named int [1:30] 3 4 6 7 17 21 22 23 24 25 ...
+  ..- attr(*, "names")= chr [1:30] "5" "6" "10" "11" ...</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cor</span>(trainCleaned)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Ozone    Solar.R       Wind       Temp
+Ozone    1.0000000  0.3730860 -0.5866277  0.6796179
+Solar.R  0.3730860  1.0000000 -0.1422180  0.3299815
+Wind    -0.5866277 -0.1422180  1.0000000 -0.5105283
+Temp     0.6796179  0.3299815 -0.5105283  1.0000000</code></pre>
+</div>
+</div>
+<p>Visualisations des relations</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(trainCleaned) <span class="sc">+</span> </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> Solar.R, <span class="at">y =</span> Ozone)) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Ozone VS Solar.R"</span>)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(trainCleaned) <span class="sc">+</span> </span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> Wind, <span class="at">y =</span> Ozone)) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Ozone VS Wind"</span>)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(trainCleaned) <span class="sc">+</span> </span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> Temp, <span class="at">y =</span> Ozone)) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="st">"Ozone VS Temp"</span>)</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="fu">grid.arrange</span>(p1, p2, p3, <span class="at">ncol =</span> <span class="dv">3</span>, <span class="at">nrow =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="regPoisson_ozone_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="modèle-de-poisson" class="level3">
+<h3 class="anchored" data-anchor-id="modèle-de-poisson">Modèle de Poisson</h3>
+<p>Le modèle de Poisson est réalisé grâce à la fonction <code>glm()</code> avec l’argument <code>family = "poisson"</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>pois.model <span class="ot">&lt;-</span> <span class="fu">glm</span>(Ozone <span class="sc">~</span> Solar.R <span class="sc">+</span> Wind <span class="sc">+</span> Temp, <span class="at">data =</span> trainCleaned, <span class="at">family =</span> <span class="st">"poisson"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="estimation-des-coefficients-significativité-globale-et-individuelle-et-interprétation" class="level3">
+<h3 class="anchored" data-anchor-id="estimation-des-coefficients-significativité-globale-et-individuelle-et-interprétation">Estimation des coefficients, significativité globale et individuelle et interprétation</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(pois.model)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+glm(formula = Ozone ~ Solar.R + Wind + Temp, family = "poisson", 
+    data = trainCleaned)
+
+Coefficients:
+              Estimate Std. Error z value Pr(&gt;|z|)    
+(Intercept)  0.4174979  0.2442489   1.709   0.0874 .  
+Solar.R      0.0025984  0.0002646   9.820   &lt;2e-16 ***
+Wind        -0.0811132  0.0063360 -12.802   &lt;2e-16 ***
+Temp         0.0440186  0.0025971  16.949   &lt;2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+(Dispersion parameter for poisson family taken to be 1)
+
+    Null deviance: 1835.72  on 70  degrees of freedom
+Residual deviance:  558.53  on 67  degrees of freedom
+AIC: 934.49
+
+Number of Fisher Scoring iterations: 5</code></pre>
+</div>
+</div>
+<p>L’expression du modèle est donc : <span class="math display">\[\ln{\lambda_{Ozone}} = \beta_0 + \beta_1 \cdot \text{Solar.R} + \beta_2 \cdot \text{Wind} + \beta_3 \cdot \text{Temp}\]</span></p>
+<p>avec <span class="math inline">\(\beta_0 = 1.457\)</span>, <span class="math inline">\(\beta_1 = 0.0025\)</span>, <span class="math inline">\(\beta_2 = -1.004\)</span>, <span class="math inline">\(\beta_3 = 0.0334\)</span> .</p>
+<p>Comme on peut le remarquer, tous les coefficients du modèle sont tous très significatifs.</p>
+<section id="interprétation-des-coefficients" class="level4">
+<h4 class="anchored" data-anchor-id="interprétation-des-coefficients">Interprétation des coefficients</h4>
+<p>On dira alors qu’une augmentation d’une unité de <code>Solar.R</code> (rayonnement solaire) entraîne une augmentation de 0.0025 ppb de la concentration moyenne d’<code>Ozone</code>. La même logique est utilisée pour les autres coefficients.</p>
+<p>Une meilleure interprétation se fait en calculant les ratios de taux d’incidence (<strong>IRR</strong>) via <span class="math inline">\(\exp(\hat{\beta}_j)\)</span> pour chaque coefficient. Ainsi, on a :</p>
+<ul>
+<li><p><strong>Solar.R :</strong> <code>exp(0.0025131) = 1.002516</code>. Une augmentation d’une unité du rayonnement solaire augmente la concentration d’ozone de <strong>0.25%</strong>, toutes choses étant égales par ailleurs</p></li>
+<li><p><strong>Wind</strong> : <code>exp(-0.1003999) = 0.9044756</code>. Pour chaque augmentation de 1 unité de la vitesse du vent, la concentration attendue d’ozone <strong>diminue de 9,55%</strong> (1-0.904).</p></li>
+<li><p><strong>Temp</strong> : <code>exp(0.0334104) = 1.033975</code>. Pour chaque augmentation de 1 degré de température, la concentration attendue d’ozone <strong>augmente de 3,4%</strong>.</p></li>
+</ul>
+</section>
+<section id="déviance" class="level4">
+<h4 class="anchored" data-anchor-id="déviance">Déviance</h4>
+<p>On remarque que la sortie <code>summary(pois.model)</code> a donné des coefficients tous <strong>très significatifs individuellement</strong>.</p>
+<p>On analyse en plus la <strong>déviance</strong>, pour analyser l’influence de chacune des variables sur l’Ozone.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(pois.model, <span class="at">test=</span><span class="st">"Chisq"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Analysis of Deviance Table
+
+Model: poisson, link: log
+
+Response: Ozone
+
+Terms added sequentially (first to last)
+
+        Df Deviance Resid. Df Resid. Dev  Pr(&gt;Chi)    
+NULL                       70    1835.72              
+Solar.R  1   301.41        69    1534.31 &lt; 2.2e-16 ***
+Wind     1   672.57        68     861.75 &lt; 2.2e-16 ***
+Temp     1   303.22        67     558.53 &lt; 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>On remarque que toutes les p-valeurs sont très significatives; par conséquent, l’influence de chacune de ces valeurs (<code>Solar.R</code>, <code>Wind</code> et <code>Temp</code>) est hautement significative sur <code>Ozone</code>.</p>
+</section>
+<section id="rapport-de-vraisemblance-lr" class="level4">
+<h4 class="anchored" data-anchor-id="rapport-de-vraisemblance-lr">Rapport de vraisemblance LR</h4>
+<p>L’objectif est d’analyser la <strong>significativité globale</strong> des coefficients :</p>
+<ul>
+<li><p>on crée le modèle nul</p></li>
+<li><p>on fait une anamyse anova entre le modèle complet et le modèle nul</p></li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>pois.model_null <span class="ot">&lt;-</span> <span class="fu">glm</span>(Ozone <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> trainCleaned, <span class="at">family =</span> <span class="st">"poisson"</span>)</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(pois.model_null, pois.model, <span class="at">test =</span> <span class="st">"Chisq"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Analysis of Deviance Table
+
+Model 1: Ozone ~ 1
+Model 2: Ozone ~ Solar.R + Wind + Temp
+  Resid. Df Resid. Dev Df Deviance  Pr(&gt;Chi)    
+1        70    1835.72                          
+2        67     558.53  3   1277.2 &lt; 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>On remarque que la p-value est hautement significative, alors le modèle est globalement significatif (il y a au moins un coefficient non nul). On dit que <em>les prédicteurs améliorent significativement le modèle par rapport au modèle nul.</em></p>
+<p>Remarque : ces résultats sont déjà visibles dans la dernière partie du <code>summary(pois.model)</code> :</p>
+<pre><code>      Null deviance: 1844.07  on 74  degrees of freedom 
+      Residual deviance:  489.11  on 71  degrees of freedom 
+      AIC: 892.59</code></pre>
+<p>Cependant, la déviance résiduelle (489.11) est&nbsp;<strong>beaucoup plus grande que ses degrés de liberté (71)</strong>. Le rapport&nbsp;<code>489.11 / 71 ≈ 6.89</code>&nbsp;est bien supérieur à 1, ce qui&nbsp;<strong>indique une très forte surdispersion</strong>.</p>
+<hr>
+</section>
+</section>
+<section id="validation-du-modèle" class="level3">
+<h3 class="anchored" data-anchor-id="validation-du-modèle">Validation du modèle</h3>
+<section id="vérification-des-hypothèses" class="level4">
+<h4 class="anchored" data-anchor-id="vérification-des-hypothèses">Vérification des hypothèses</h4>
+<ol type="1">
+<li><p><strong>Indépendance des réponses (Ozone)</strong></p>
+<p>On considère en général que cette hypothèse est satisfaite.</p></li>
+<li><p><strong>Distribution de Poisson pour les réponses (Ozone)</strong></p>
+<p>Pour cela, on va comparer la distribution des valeurs observées avec la distribution théorique de Poisson de paramètre la moyenne observée.</p></li>
+</ol>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>lambda_obs <span class="ot">&lt;-</span> <span class="fu">mean</span>(trainCleaned<span class="sc">$</span>Ozone)</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="co"># simulation des comptages</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>theoretic_oz <span class="ot">&lt;-</span> <span class="fu">rpois</span>(<span class="fu">length</span>(trainCleaned<span class="sc">$</span>Ozone), <span class="at">lambda =</span> lambda_obs)</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a><span class="co"># affichage simultané</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(trainCleaned) <span class="sc">+</span> </span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="fu">aes</span>(trainCleaned<span class="sc">$</span>Ozone, <span class="at">fill =</span> <span class="st">"#0000FF"</span>)) <span class="sc">+</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="fu">aes</span>(theoretic_oz, <span class="at">fill =</span> <span class="st">"#FF2100"</span>)) <span class="sc">+</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Ozone vs Distribution de Poisson"</span>) <span class="sc">+</span> </span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_discrete</span>(<span class="at">name =</span> <span class="st">"Légende"</span>, <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"Ozone"</span>, <span class="st">"Poisson théorique"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="regPoisson_ozone_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>On peut voir que les deux distributions sont assez différentes. La variable <code>Ozone</code> ne suit donc pas une distribution de poisson de paramètre 42.78. De plus, les valeurs sont très dispersées sur l’axe des abscisses, ce qui peut être un effet de la <strong>surdispersion</strong>.</p>
+<ol start="3" type="1">
+<li><p><strong>Surdispersion</strong></p>
+<p>La surdispersion a déjà été remarquée précédemment, donc nous allons nous contenter de faire un test pour la confirmer, celui du <strong>Z-Score.</strong></p>
+<p><span class="math display">\[
+Z_i = \frac{(y_i - \lambda_i)^2 - y_i}{\lambda_i \sqrt{2}} \sim t_{1,\alpha}
+\]</span></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>lamda <span class="ot">&lt;-</span> <span class="fu">predict</span>(pois.model, <span class="at">type =</span> <span class="st">"response"</span>) <span class="co">#estimations du paramètre lambda</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>z <span class="ot">&lt;-</span> ((trainCleaned<span class="sc">$</span>Ozone <span class="sc">-</span> lamda)<span class="sc">^</span><span class="dv">2</span> <span class="sc">-</span> trainCleaned<span class="sc">$</span>Ozone) <span class="sc">/</span> (lamda <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="dv">2</span>))</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>zscore <span class="ot">&lt;-</span> <span class="fu">lm</span>(z <span class="sc">~</span> <span class="dv">1</span>)</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(zscore)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = z ~ 1)
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-6.089 -4.918 -2.898 -0.408 72.882 
+
+Coefficients:
+            Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)    5.365      1.346   3.985 0.000163 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 11.34 on 70 degrees of freedom</code></pre>
+</div>
+</div></li>
+</ol>
+<p>Le <strong>z-score</strong> est donc significatif, ce qui, d’après <strong>J.M. Hilbe</strong>, indique la présence de <strong>surdispersion</strong>, ce qui confirme notre analyse précédente.</p>
+<p>On constate que deux hypothèses sont violées (distribution de Poisson et surdispersion), alors nous allons passer à l’utilisation d’autres structures d’erreurs : les modèles <strong>quasi-poisson</strong> et <strong>binomial négatif.</strong></p>
+<ul>
+<li><p><strong>Modèle Quasi-Poisson</strong></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>quasipois.model <span class="ot">&lt;-</span> <span class="fu">glm</span>(Ozone <span class="sc">~</span> Solar.R <span class="sc">+</span> Wind <span class="sc">+</span> Temp, <span class="at">data =</span> trainCleaned, <span class="at">family =</span> <span class="st">"quasipoisson"</span>)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(quasipois.model)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+glm(formula = Ozone ~ Solar.R + Wind + Temp, family = "quasipoisson", 
+    data = trainCleaned)
+
+Coefficients:
+              Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)  0.4174979  0.7378724   0.566   0.5734    
+Solar.R      0.0025984  0.0007993   3.251   0.0018 ** 
+Wind        -0.0811132  0.0191410  -4.238 7.06e-05 ***
+Temp         0.0440186  0.0078459   5.610 4.16e-07 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+(Dispersion parameter for quasipoisson family taken to be 9.126351)
+
+    Null deviance: 1835.72  on 70  degrees of freedom
+Residual deviance:  558.53  on 67  degrees of freedom
+AIC: NA
+
+Number of Fisher Scoring iterations: 5</code></pre>
+</div>
+</div>
+<p>On remarque que <span class="math inline">\(489/71 = 6.887324 \lt 7.564 \text{ (paramètre de dispersion)}\)</span>, par conséquent, la surdispersion a été prise en compte par ce modèle et l’a corrigé.</p>
+<p><strong>NB :</strong> L’utilisation d’une structure d’erreur «&nbsp;quasi poisson&nbsp;» à pour conséquence d’<strong>augmenter l’erreur standard des paramètres</strong>. On peut le remarquer par exemple avec celui de l’<code>intercept</code> qui était de 0.24 environ pour le modèle de poisson standard, contrairement à celui actuel de 0.66 environ. <strong>En dehors de ça les coefficients ne changent pas</strong>.</p></li>
+<li><p><strong>Modèle Binomial Négatif</strong></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>nb2_model <span class="ot">&lt;-</span> MASS<span class="sc">::</span><span class="fu">glm.nb</span>(Ozone <span class="sc">~</span> Solar.R <span class="sc">+</span> Wind <span class="sc">+</span> Temp, <span class="at">data =</span> trainCleaned)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nb2_model)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+MASS::glm.nb(formula = Ozone ~ Solar.R + Wind + Temp, data = trainCleaned, 
+    init.theta = 4.973327961, link = log)
+
+Coefficients:
+              Estimate Std. Error z value Pr(&gt;|z|)    
+(Intercept)  0.1993934  0.6690169   0.298 0.765673    
+Solar.R      0.0026232  0.0006638   3.952 7.76e-05 ***
+Wind        -0.0619089  0.0184117  -3.362 0.000772 ***
+Temp         0.0443521  0.0072895   6.084 1.17e-09 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+(Dispersion parameter for Negative Binomial(4.9733) family taken to be 1)
+
+    Null deviance: 219.241  on 70  degrees of freedom
+Residual deviance:  75.845  on 67  degrees of freedom
+AIC: 594.55
+
+Number of Fisher Scoring iterations: 1
+
+              Theta:  4.973 
+          Std. Err.:  0.996 
+
+ 2 x log-likelihood:  -584.547 </code></pre>
+</div>
+</div>
+<p>De même, pour ce modèle, on a : <span class="math inline">\(80.684 / 71 = 1.136394\)</span>, ce qui indique une surdispersion modérée : on dit que ce modèle a absorbé la surdispersion induite par le modèle de poisson simple.</p></li>
+</ul>
+</section>
+<section id="qualité-et-pertinence" class="level4">
+<h4 class="anchored" data-anchor-id="qualité-et-pertinence">Qualité et Pertinence</h4>
+<p>Jusque-là, nous avons 3 modèles : poisson normal, quasi-poisson et binomial négatif.</p>
+<p>Pour analyser la pertinence de chacun de ces modèles, nous allons faire les tests de :</p>
+<ul>
+<li><p>Test de Hosmer-Lemeshow</p></li>
+<li><p>Test des résidus de Pearson</p></li>
+<li><p>Test des résidus de la déviance</p></li>
+</ul>
+<p>Quant à la qualité, nous allons utiliser</p>
+<ul>
+<li><p>le score R²</p></li>
+<li><p>la précision des prédiction</p></li>
+<li><p>les mesures d’erreurs : RMSE, MSE et RSE</p></li>
+</ul>
+<ol type="1">
+<li><p><strong>Pertinence</strong></p></li>
+</ol>
+<hr>
+</section>
+</section>
+</section>
+<section id="choix-du-modèle" class="level2">
+<h2 class="anchored" data-anchor-id="choix-du-modèle">Choix du modèle</h2>
 </section>
 </section>
 

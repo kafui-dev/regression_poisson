@@ -35,6 +35,12 @@ library(caTools) # pour la séparation de dataset en parties train et test
 
 #install.packages("MASS") 
 library(MASS) # pour le modèle binomial négatif
+
+#install.packages("ResourceSelection") 
+library(ResourceSelection) # pour le test de Hosmer-Lemeshow
+
+#install.packages("performance") 
+library(performance) # pour la performance
 ```
 
 Chargement des données et exploration.
@@ -241,6 +247,126 @@ On constate que deux hypothèses sont violées (distribution de Poisson et surdi
 
     De même, pour ce modèle, on a : $80.684 / 71 = 1.136394$, ce qui indique une surdispersion modérée : on dit que ce modèle a absorbé la surdispersion induite par le modèle de poisson simple.
 
+    Nous pouvons tester aussi la régression de Poisson avec des poids, comme l'a proposé Matthias Döring :
+
+    ```{r}
+    get.weights <- function(trainCleaned) {
+        z.scores <- (trainCleaned$Ozone - mean(trainCleaned$Ozone)) / sd(trainCleaned$Ozone)
+        weights <- exp(z.scores)
+        weights <- weights / mean(weights) # normalisation
+        return(weights)
+    }
+
+    weights <- get.weights(trainCleaned)
+
+    weighted_pois.model <- glm(Ozone ~ Solar.R + Wind + Temp, data = trainCleaned, family = "poisson", weights = weights)
+
+    summary(weighted_pois.model)
+    ```
+
+    -   On remarque ici que le modèle a une constante très significative, qui n'était pas le cas dans le modèle de poisson standard.
+
+    Faisons aussi une régression pesée de quasi-poisson
+
+    ```{r}
+    weighted_quasipois.model <- glm(Ozone ~ Solar.R + Wind + Temp, data = trainCleaned, family = "quasipoisson", weights = weights)
+
+    summary(weighted_quasipois.model)
+
+    weighted_nb2_model <- MASS::glm.nb(Ozone ~ Solar.R + Wind + Temp, data = trainCleaned, weights = weights)
+
+    summary(weighted_nb2_model)
+    ```
+
+    Ici, l'intercept devient significatif face à celui du quasipoisson sans poids, mais la variable `Temp` devient non significative.
+
+    Pour le modèle binomial négatif, a régression avec poids a rendu la constante du modèle significative, et le coefficient de dispersion est sensiblement le même.
+
 #### Qualité et Pertinence
 
-Jusque-là, nous avons 3 modèles : poisson normal, quasi-poisson et binomial négatif.
+Jusque-là, nous avons 6 modèles : poisson normal et avec poids, quasi-poisson avec poids et binomial négatif, et avec poids.
+
+Pour analyser la pertinence de chacun de ces modèles, nous allons faire les tests de :
+
+-   Test de Hosmer-Lemeshow
+
+-   Test des résidus de Pearson
+
+Quant à la qualité, nous allons utiliser
+
+-   le score R²
+
+-   la précision des prédiction
+
+-   les mesures d'erreurs : RMSE, MSE et RSE etc
+
+1.  **Pertinence**
+
+    Hosmer-Lemeshow
+
+    ```{r}
+    hoslem.test(trainCleaned$Ozone, fitted(pois.model))
+    hoslem.test(trainCleaned$Ozone, fitted(weighted_pois.model))
+
+    hoslem.test(trainCleaned$Ozone, fitted(quasipois.model))
+    hoslem.test(trainCleaned$Ozone, fitted(weighted_quasipois.model))
+
+    hoslem.test(trainCleaned$Ozone, fitted(nb2_model))
+    hoslem.test(trainCleaned$Ozone, fitted(weighted_nb2_model))
+    ```
+
+    Ici, aucune p-valeur n'est inférieure à 5%, et sont égales à 1 ! Autrement dit, aucun modèle ne serait assez adapté aux données. Néanmoins, le modèle binomial négatif avec poids a une statitistique plus grande que celle des autres.
+
+    Résidus de Pearson
+
+    ```{r}
+    s <- sum(residuals(pois.model,type="pearson")^2)
+    ddl <- df.residual(pois.model)
+    pv <- 1-pchisq(s,ddl)
+    cat("\nModèle Poisson standard : ", pv)
+
+    s <- sum(residuals(weighted_pois.model,type="pearson")^2)
+    ddl <- df.residual(weighted_pois.model)
+    pv <- 1-pchisq(s,ddl)
+    cat("\nModèle Poisson avec poids : ", pv)
+
+    s <- sum(residuals(quasipois.model,type="pearson")^2)
+    ddl <- df.residual(quasipois.model)
+    pv <- 1-pchisq(s,ddl)
+    cat("\nModèle QuasiPoisson : ", pv)
+
+    s <- sum(residuals(weighted_quasipois.model,type="pearson")^2)
+    ddl <- df.residual(weighted_quasipois.model)
+    pv <- 1-pchisq(s,ddl)
+    cat("\nModèle QuasiPoisson avec poids: ", pv)
+
+    s <- sum(residuals(nb2_model,type="pearson")^2)
+    ddl <- df.residual(nb2_model)
+    pv <- 1-pchisq(s,ddl)
+    cat("\nModèle binomial négatif : ", pv)
+
+    s <- sum(residuals(weighted_nb2_model,type="pearson")^2)
+    ddl <- df.residual(weighted_nb2_model)
+    pv <- 1-pchisq(s,ddl)
+    cat("\nModèle binomial négatif avec poids: ", pv)
+    ```
+
+    Aucune p-value n'est supérieure à 5%, alors aucun modèle ne serait bien adapté aux données. Par contre le modèle binomial négatif semble avoir une meilleure p-value.
+
+    Par contre, celle du modèle binomial négatif avec poids respecte la condition : c'est le plus pertinent.
+
+    En conclusion pour la pertinence, seul le modèle binomial négatif serait adapté aux données.
+
+    2.  **Qualité**
+
+        Nous pouvons tout vérifier grâce à `compare_performance()` du package `performance`.
+
+    ```{r}
+    compare_performance(pois.model, weighted_pois.model, quasipois.model, weighted_quasipois.model, nb2_model, weighted_nb2_model, metrics = "all", rank = TRUE)
+    ```
+
+------------------------------------------------------------------------
+
+### Conclusion
+
+Des analyses précédentes, le modèle binomial négatif est le plus performant.

@@ -4,13 +4,14 @@ Ce projet vise à modéliser le niveau d'ozone à New York en utilisant différe
 
 ## Description
 
-Le projet analyse l'influence de facteurs environnementaux tels que le rayonnement solaire (`Solar.R`), le vent (`Wind`) et la température (`Temp`) sur la concentration d'ozone. Une attention particulière est portée à la détection et au traitement de la **surdispersion**, un phénomène courant dans les modèles de Poisson où la variance est supérieure à la moyenne.
+Le projet analyse l'influence de facteurs environnementaux tels que le rayonnement solaire (`Solar.R`), le vent (`Wind`) et la température (`Temp`) sur la concentration d'ozone. Une attention particulière est portée à la détection et au traitement de la **surdispersion**, ainsi qu'à l'amélioration des modèles via des **régressions pondérées**.
 
 ### Points clés de l'analyse :
 - **Analyse exploratoire** des données `airquality`.
 - **Modélisation de Poisson** initiale et calcul des ratios de taux d'incidence (IRR).
-- **Tests de validation** : Vérification de la distribution et test de surdispersion (Z-Score de Hilbe).
-- **Modèles alternatifs** : Implémentation de modèles Quasi-Poisson et Binomial Négatif pour corriger la surdispersion.
+- **Tests de validation** : Vérification de la distribution, test de surdispersion (Z-Score de Hilbe), test de Hosmer-Lemeshow et analyse des résidus de Pearson.
+- **Modèles alternatifs et pondérés** : Implémentation de modèles Quasi-Poisson et Binomial Négatif, ainsi que leurs versions pondérées pour corriger la surdispersion et améliorer la précision.
+- **Comparaison de performance** : Utilisation de métriques multicritères (AIC, BIC, R², RMSE) pour identifier le meilleur modèle.
 
 ## Structure du projet
 
@@ -31,10 +32,12 @@ Les packages suivants sont requis :
 - `gridExtra` (mise en page des graphiques)
 - `caTools` (séparation des données train/test)
 - `MASS` (modèle binomial négatif)
+- `ResourceSelection` (test de Hosmer-Lemeshow)
+- `performance` (comparaison des modèles)
 
 Vous pouvez les installer en exécutant :
 ```r
-install.packages(c("ggplot2", "gridExtra", "caTools", "MASS"))
+install.packages(c("ggplot2", "gridExtra", "caTools", "MASS", "ResourceSelection", "performance"))
 ```
 
 Si vous utilisez `renv`, vous pouvez restaurer l'environnement avec :
@@ -50,6 +53,9 @@ renv::restore()
 
 ## Données
 Le projet utilise le dataset `airquality` intégré à R, qui contient des mesures quotidiennes de la qualité de l'air à New York de mai à septembre 1973.
+
+## Résultats
+L'analyse montre que le **modèle Binomial Négatif** (particulièrement sa version pondérée) est le plus performant pour prédire le niveau d'ozone, en raison de sa capacité à absorber la surdispersion observée dans les données initiales.
 
 ---
 Projet réalisé en groupe dans le cadre d'une étude sur les modèles linéaires généralisés (GLM).
