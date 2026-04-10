@@ -47,7 +47,7 @@ Chargement des données et exploration.
 
 ```{r}
 data("airquality")
-?airquality
+#?airquality
 ```
 
 ```{r}
@@ -364,6 +364,130 @@ Quant à la qualité, nous allons utiliser
     ```{r}
     compare_performance(pois.model, weighted_pois.model, quasipois.model, weighted_quasipois.model, nb2_model, weighted_nb2_model, metrics = "all", rank = TRUE)
     ```
+
+Résumé en graphiques
+
+```{r}
+#' Comparaison graphique des prédictions d'un modèle (entraînement vs test)
+#'
+#' @param model Un objet modèle R (ex: lm, glm) contenant les valeurs ajustées.
+#' @param test_data Un data.frame ou une matrice contenant les prédicteurs du test.
+#' @param test_response Vecteur des valeurs réelles de la variable réponse pour le test.
+#' @param test_only Booléen. Si TRUE, seul le jeu de test est affiché.
+#'
+#' @return Un objet ggplot représentant les valeurs observées vs prédites.
+#' @export
+#'
+#' @examples
+#' modele <- lm(mpg ~ wt + hp, data = mtcars[1:20, ])
+#' p <- plot_pred_accuracy(modele, mtcars[21:32, ], mtcars$mpg[21:32])
+#' print(p)
+plot_pred_accuracy <- function(model, test_data, test_response, 
+                               test_only = FALSE,
+                               plot_title = NULL,
+                               plot_subtitle = NULL) {
+  
+  if (!requireNamespace("ggplot2", quietly = TRUE))
+    stop("Le package ggplot2 est requis. Installez-le avec install.packages('ggplot2').")
+  
+  # Prédictions entraînement (déjà sur l'échelle de la réponse pour un GLM)
+  train_pred <- stats::fitted(model)
+  train_obs  <- stats::model.frame(model)[, 1]
+  
+  # Prédictions test (échelle de la réponse)
+  test_pred <- stats::predict(model, newdata = test_data, type = "response")
+  
+  # Vérification rapide
+  if (stats::var(test_pred) == 0) {
+    warning("Les prédictions sur le test sont constantes (variance nulle). Vérifiez le modèle et les données.")
+  }
+  
+  # Construction des données pour ggplot
+  if (test_only) {
+    plot_points <- data.frame(Outcome = test_response, Prediction = test_pred, 
+                              DataSet = "test")
+    plot_residus <- data.frame(x = test_response, y = test_pred,
+                               xend = test_response, yend = test_response, 
+                               DataSet = "test")
+  } else {
+    df_train <- data.frame(Outcome = train_obs, Prediction = train_pred, 
+                           DataSet = "entraînement")
+    df_test  <- data.frame(Outcome = test_response, Prediction = test_pred, 
+                           DataSet = "test")
+    plot_points <- rbind(df_train, df_test)
+    
+    res_train <- train_obs - train_pred
+    res_test  <- test_response - test_pred
+    df_train_res <- data.frame(x = train_obs, y = train_pred,
+                               xend = train_obs, yend = train_obs, 
+                               DataSet = "entraînement")
+    df_test_res  <- data.frame(x = test_response, y = test_pred,
+                               xend = test_response, yend = test_response, 
+                               DataSet = "test")
+    plot_residus <- rbind(df_train_res, df_test_res)
+  }
+  
+  r2_test <- round(stats::cor(test_pred, test_response)^2, 3)
+  
+  # Titres par défaut si non fournis
+  if (is.null(plot_title)) {
+    plot_title <- "Observé vs Prédit"
+  }
+  if (is.null(plot_subtitle)) {
+    plot_subtitle <- if (test_only) "Jeu de test uniquement" else "Jeux d'entraînement et de test"
+  }
+  
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+    ggplot2::geom_point(data = plot_points,
+                        ggplot2::aes(x = Outcome, y = Prediction, color = DataSet),
+                        size = 2.5, alpha = 0.8) +
+    ggplot2::geom_segment(data = plot_residus,
+                          ggplot2::aes(x = x, y = y, xend = xend, yend = yend, color = DataSet),
+                          alpha = 0.3) +
+    ggplot2::labs(x = "Valeurs observées", y = "Valeurs prédites",
+                  title = plot_title,
+                  subtitle = plot_subtitle,
+                  color = "Jeu de données") +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(legend.position = "bottom")
+  
+  # Annotation du R²
+  max_val <- max(plot_points$Outcome, plot_points$Prediction)
+  p + ggplot2::annotate("text", x = 0.05 * max_val, y = 0.95 * max_val,
+                        label = paste0("R² test : ", r2_test),
+                        size = 5, hjust = 0, vjust = 1, fontface = "bold")
+}
+```
+
+```{r}
+pl1 <- plot_pred_accuracy(pois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle de Poisson Standard")
+
+pl2 <- plot_pred_accuracy(weighted_pois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle de Poisson avec poids")
+
+pl3 <- plot_pred_accuracy(quasipois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle de QuasiPoisson Standard")
+
+pl4 <- plot_pred_accuracy(weighted_quasipois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle de QuasiPoisson avec poids")
+
+pl5 <- plot_pred_accuracy(nb2_model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle Binomial Négatif Standard")
+
+pl6 <- plot_pred_accuracy(weighted_nb2_model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle Binomial Négatif avec poids")
+
+#pfinal <- grid.arrange(pl1, pl2, pl3, pl4, pl5, pl6, ncol = 2, nrow = 3)
+
+```
+
+```{r}
+grid.arrange(pl1, pl2, nrow = 1, ncol = 2)
+```
+
+```{r}
+grid.arrange(pl3, pl4, nrow = 1, ncol = 2)
+```
+
+```{r}
+grid.arrange(pl5, pl6, nrow = 1, ncol = 2)
+```
 
 ------------------------------------------------------------------------
 
