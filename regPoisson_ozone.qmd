@@ -90,6 +90,10 @@ str(trainCleaned)
 cor(trainCleaned)
 ```
 
+```{r}
+var(trainCleaned$Ozone)
+```
+
 Visualisations des relations
 
 ```{r}
@@ -233,7 +237,7 @@ On constate que deux hypothèses sont violées (distribution de Poisson et surdi
     summary(quasipois.model)
     ```
 
-    On remarque que $489/71 = 6.887324 \lt 7.564 \text{ (paramètre de dispersion)}$, par conséquent, la surdispersion a été prise en compte par ce modèle et l'a corrigé.
+    On remarque que $$463.84/72 \lt 6.442222 \text{ (paramètre de dispersion)}$$, par conséquent, la surdispersion a été prise en compte par ce modèle et l'a corrigé.
 
     **NB :** L'utilisation d’une structure d’erreur « quasi poisson » à pour conséquence d’**augmenter l’erreur standard des paramètres**. On peut le remarquer par exemple avec celui de l'`intercept` qui était de 0.24 environ pour le modèle de poisson standard, contrairement à celui actuel de 0.66 environ. **En dehors de ça les coefficients ne changent pas**.
 
@@ -280,7 +284,7 @@ On constate que deux hypothèses sont violées (distribution de Poisson et surdi
 
     Ici, l'intercept devient significatif face à celui du quasipoisson sans poids, mais la variable `Temp` devient non significative.
 
-    Pour le modèle binomial négatif, a régression avec poids a rendu la constante du modèle significative, et le coefficient de dispersion est sensiblement le même.
+    Pour le modèle binomial négatif, la régression avec poids a rendu la constante du modèle significative, et le coefficient de dispersion est sensiblement le même.
 
 #### Qualité et Pertinence
 
@@ -433,9 +437,7 @@ plot_pred_accuracy <- function(model, test_data, test_response,
   if (is.null(plot_title)) {
     plot_title <- "Observé vs Prédit"
   }
-  if (is.null(plot_subtitle)) {
-    plot_subtitle <- if (test_only) "Jeu de test uniquement" else "Jeux d'entraînement et de test"
-  }
+  
   
   p <- ggplot2::ggplot() +
     ggplot2::geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
@@ -461,17 +463,17 @@ plot_pred_accuracy <- function(model, test_data, test_response,
 ```
 
 ```{r}
-pl1 <- plot_pred_accuracy(pois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle de Poisson Standard")
+pl1 <- plot_pred_accuracy(pois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Poisson Standard")
 
-pl2 <- plot_pred_accuracy(weighted_pois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle de Poisson avec poids")
+pl2 <- plot_pred_accuracy(weighted_pois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Poisson Pondéré")
 
-pl3 <- plot_pred_accuracy(quasipois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle de QuasiPoisson Standard")
+pl3 <- plot_pred_accuracy(quasipois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "QuasiPoisson Standard")
 
-pl4 <- plot_pred_accuracy(weighted_quasipois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle de QuasiPoisson avec poids")
+pl4 <- plot_pred_accuracy(weighted_quasipois.model, testCleaned[-1], testCleaned$Ozone, plot_title = "QuasiPoisson Pondéré")
 
-pl5 <- plot_pred_accuracy(nb2_model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle Binomial Négatif Standard")
+pl5 <- plot_pred_accuracy(nb2_model, testCleaned[-1], testCleaned$Ozone, plot_title = "Binomial Négatif Standard")
 
-pl6 <- plot_pred_accuracy(weighted_nb2_model, testCleaned[-1], testCleaned$Ozone, plot_title = "Performances Modèle Binomial Négatif avec poids")
+pl6 <- plot_pred_accuracy(weighted_nb2_model, testCleaned[-1], testCleaned$Ozone, plot_title = "Binomial Négatif Pondéré")
 
 #pfinal <- grid.arrange(pl1, pl2, pl3, pl4, pl5, pl6, ncol = 2, nrow = 3)
 
@@ -487,6 +489,37 @@ grid.arrange(pl3, pl4, nrow = 1, ncol = 2)
 
 ```{r}
 grid.arrange(pl5, pl6, nrow = 1, ncol = 2)
+```
+
+```{r}
+
+AIC <- c(
+  AIC(pois.model),
+  AIC(weighted_pois.model),
+  AIC(quasipois.model),
+  AIC(weighted_quasipois.model),
+  AIC(nb2_model),
+  AIC(weighted_nb2_model))
+
+BIC <- c(
+  BIC(pois.model),
+  BIC(weighted_pois.model),
+  BIC(quasipois.model),
+  BIC(weighted_quasipois.model),
+  BIC(nb2_model),
+  BIC(weighted_nb2_model))
+
+models = c("std poisson",
+           "wt poisson",
+           "std quasipoisson",
+           "wt quasipoisson",
+           "std nb2",
+           "wt nb2")
+
+
+info_df <- data.frame(models, AIC, BIC)
+
+info_df
 ```
 
 ------------------------------------------------------------------------
