@@ -2,3 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
+.Rprofile
+.idea/
+renv/
+*.Rproj
+*.html
+*_files/
