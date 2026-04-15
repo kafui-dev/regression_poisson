@@ -1,6 +1,8 @@
 ---
 title: "regPoisson_ozone"
 format: html
+toc: true
+toc-location: left
 ---
 
 # Régression de Poisson : prédiction de l'ozone
@@ -526,4 +528,4 @@ info_df
 
 ### Conclusion
 
-Des analyses précédentes, le modèle binomial négatif est le plus performant.
+En conclusion, l'un des problèmes les plus féquents en modélisation par la régression de Poisson est la surdispersion, et les moyens les plus courants pour la résoudre sont la modélisation de quasipoisson et le modèle binomial négatif. Cependant, pour les données étudiées, le modèle quasipoisson n'a aucun avantage sur la modélisation de poisson si ce n'est de prendre en compte la surdispersion. Le modèle binomial négatif semble être en termes de pertinence être le plus adapté à nos données étudiées. La pondération, comme constatée par Matthias Döring prend mieux en compte les outliers, mais diminue un peu la qualité du modèle.
