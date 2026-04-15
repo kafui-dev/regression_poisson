@@ -1,3 +1,5 @@
+![R Version](https://img.shields.io/badge/R-%3E%3D%204.3.0-blue.svg)
+
 # Régression de Poisson : Prédiction de l'Ozone
 
 Ce projet vise à modéliser le niveau d'ozone à New York en utilisant différentes approches de régression pour données de comptage (Poisson, Quasi-Poisson et Binomiale Négative). L'étude s'appuie sur le jeu de données classique `airquality`.
