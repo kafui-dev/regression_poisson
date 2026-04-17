@@ -311,6 +311,7 @@ Quant à la qualité, nous allons utiliser
     Hosmer-Lemeshow
 
     ```{r}
+    #| echo: true
     hoslem.test(trainCleaned$Ozone, fitted(pois.model))
     hoslem.test(trainCleaned$Ozone, fitted(weighted_pois.model))
 
@@ -374,6 +375,7 @@ Quant à la qualité, nous allons utiliser
 Résumé en graphiques
 
 ```{r}
+#| include: false
 #' Comparaison graphique des prédictions d'un modèle (entraînement vs test)
 #'
 #' @param model Un objet modèle R (ex: lm, glm) contenant les valeurs ajustées.
